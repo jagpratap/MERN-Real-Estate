@@ -1,57 +1,27 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useReducer } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
 
-const initialState = {
-  formData: {
-    email: "",
-    password: "",
-  },
-  loading: false,
-  error: null,
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case "formData":
-      return {
-        ...state,
-        formData: {
-          ...state.formData,
-          [action.payload.id]: action.payload.value,
-        },
-      };
-    case "submit":
-      return {
-        ...state,
-        loading: true,
-        error: null,
-      };
-    case "success":
-      return {
-        ...state,
-        loading: false,
-      };
-    case "failure":
-      return {
-        ...state,
-        loading: false,
-        error: action.payload,
-      };
-    default:
-      throw new Error("Unknown action type!!!");
-  }
-}
+import {
+  signInFailure,
+  signInStart,
+  signInSuccess,
+} from "../redux/user/userSlice";
 
 export default function SignIn() {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const { formData, loading, error } = state;
+  const [formData = {}, setFormData] = useState({
+    email: "",
+    password: "",
+  });
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.user);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      dispatch({ type: "submit" });
+      dispatch(signInStart());
       const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: {
@@ -63,16 +33,19 @@ export default function SignIn() {
       if (!res.ok) {
         throw new Error(data.message);
       }
-      dispatch({ type: "success" });
+      dispatch(signInSuccess(data));
       navigate("/");
     } catch (err) {
-      dispatch({ type: "failure", payload: err.message });
+      dispatch(signInFailure(err.message));
     }
   };
 
   const handleChange = (event) => {
     const { id, value } = event.target;
-    dispatch({ type: "formData", payload: { id, value } });
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
   };
 
   return (
